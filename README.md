@@ -1,67 +1,72 @@
 # Face Detection with Haar Cascade
+<img src="https://user-images.githubusercontent.com/61585411/167343360-8475ff3a-b3f1-43a3-ac0b-40ddadecd232.jpg" width=600>
 
-## Steps Involved in Building Facial Landmarks Detection Application
-- Importing all the essential libraries
-- Reading a sample image
-- Performing facial landmarks detection
-- Drawing the results on the white frame image
-<img src="https://user-images.githubusercontent.com/61585411/167333971-2c3f7a6a-bd2b-4cee-b924-55683218865b.gif">
+While we can obtain significantly higher accuracy and more robust face detections with deep learning face detectors, OpenCV’s Haar cascades still have their place:
+- They are lightweight
+- They are super fast, even on resource-constrained devices
+- The Haar cascade model size is tiny (930 KB)
+Yes, there are several problems with Haar cascades, namely that they are prone to false-positive detections and less accurate than their HOG + Linear SVM, SSD, YOLO, etc., counterparts. However, they are still useful and practical, especially on resource-constrained devices.
 
-## Step 1a: Import the libraries
+## Procedures
+1. Import the libraries.
+2. Setting up a webcam.
+3. Creating face detector
+4. Do face detection by using Haar Cascade
+5. Displaying the output
+
+## Step 1: Import the libraries
 ```python
 import cv2
-import mediapipe as mp
-import numpy as np
+import time
 ```
-## Step 1b: Setting up a webcam (Windows)
+## Step 2: Setting up a webcam (Windows)
 ```python
 cap = cv2.VideoCapture()
 cap.open(0, cv2.CAP_DSHOW)
+cap.set(3, 640)
+cap.set(4, 480)
 ```
 It is quicker to get web cam live in Windows environment by adding cv2.CAP_DSHOW attribute.
-## Step 1b: Setting up a webcam (Windows/Linux/Mac)
+## Step 2: Setting up a webcam (Windows/Linux/Mac)
 ```python
 cap = cv2.VideoCapture(0)
+cap.set(3, 640)
+cap.set(4, 480)
 ```
-## Step 1c: Initialize the face_mesh class from the Mediapipe library
+## Step 3: Initialize the face detector by using CascadeClassifier
 ```python
-mp_face_mesh = mp.solutions.face_mesh
-face_mesh = mp_face_mesh.FaceMesh()
+face_detector = cv2.CascadeClassifier("face.xml")
 ```
-## Step 2: Capturing the video feed using Webcam and create white frame to draw detected facial lankmarks
+## Step 4: Do face detection by using Haar Cascade
 ```python
+pTime = 0
 while True:
-    # Image
-    ret, img = cap.read()
-    if ret is not True:
-        break
-    height, width, _ = img.shape
-    white_frame = np.zeros((height, width, 3), np.uint8)
-    white_frame.fill(255)
-    rgb_img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    success, img = cap.read()
+    if success:
+        faces = face_detector.detectMultiScale(
+        img,
+        scaleFactor=1.2,
+        minNeighbors=5,
+        minSize=(50, 50)
+    )
+    for (x,y,w,h) in faces:
+        cv2.rectangle(img,(x,y), (x+w,y+h), (0,255,0), 3)
+
+    cTime = time.time()
+    fps = 1/(cTime - pTime)
+    pTime = cTime
 ```
-## Step 3: Performing facial landmarks detection and draw the results
+## Step 5: Displaying the output
 ```python
-    # Facial landmarks
-    result = face_mesh.process(rgb_img)
-    try:
-        for facial_landmarks in result.multi_face_landmarks:
-            for i in range(0, 468):
-                pt1 = facial_landmarks.landmark[i]
-                x = int(pt1.x * width)
-                y = int(pt1.y * height)
-                cv2.circle(white_frame, (x, y), 2, (100, 100, 0), -1)
-    except Exception as e:
-        pass
-    cv2.imshow("Image", img)
-    cv2.imshow("White", white_frame)
-    k = cv2.waitKey(1)
-    if k == ord('q'):
+    cv2.putText(img, f'FPS: {int(fps)}', (20,40), cv2.FONT_HERSHEY_PLAIN,2,(0,255,0),2)
+    cv2.imshow("Face Detection",img)
+
+    if cv2.waitKey(1) == ord('q') or cv2.waitKey(1) == 27:
         break
-        
-cv2.destroyAllWindows()        
+
+cv2.destroyAllWindows()
 cap.release()
 ```
 ## References
-- [MediaPipe Face Mesh](https://google.github.io/mediapipe/solutions/face_mesh.html)
-- [Facial Landmarks Detection Using Mediapipe Library](https://www.analyticsvidhya.com/blog/2022/03/facial-landmarks-detection-using-mediapipe-library/)
+- [OpenCV Face detection with Haar cascades](https://pyimagesearch.com/2021/04/05/opencv-face-detection-with-haar-cascades/)
+- [Face Detection with HAAR Cascade in OpenCV Python](https://machinelearningknowledge.ai/face-detection-with-haar-cascade-in-opencv-python/)
